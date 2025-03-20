@@ -21,7 +21,6 @@ def string_to_index(string):
             index.append(29)
     return index
     
-
 def objective_function(x): #take in x, a 30x2 matrix (30 rows for different keys, 2 columns for x and y positions)
     #initialize resting finger positions - assume that each finger comes to rest after pressing a key UNLESS the next key is pressed by the same finger
     f0 = np.array([1.5,2]) #pinky finger
@@ -38,6 +37,7 @@ def objective_function(x): #take in x, a 30x2 matrix (30 rows for different keys
         Zebras grazed in far-off lands. Quirky scenes unfold daily. Few question why. \
         Life's charm, both simple and profound, remains constant. Is there anything more precious than this?"
     string_index = string_to_index(string) #convert string to index in function above
+    # print(string_index)
     total_dist = 0 # initialize total_dist to 0
     active_finger_prev = 4 # initialize active_finger_prev to a value that is not 0,1,2,3
     for j in range(len(string_index)):
@@ -88,8 +88,11 @@ def generate_individual():
                 break
     return x
 
-person = generate_individual()
-# print(person)
+population = []
+for i in range(10):
+    person = generate_individual()
+    population.append(person)
+# print(population)
 
 # # Extract x and y coordinates
 # x_coords = person[:, 0]
