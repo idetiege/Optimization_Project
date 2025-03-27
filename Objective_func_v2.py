@@ -11,7 +11,18 @@ Last updated: 3/27/2025 around 3pm
 
 Notes:
 - Updated layout. Feel free to add / remove comments. I have no attachment to them. 
-- 
+- If same_finger_penalty is really big, then e gets moved to the pinky finger. We theorize 
+  that this is because lots of letters come before and after e.
+- We are currently using the same number of people for each generation. We could change this
+  to use a different number of people for each generation.
+- We could also change the number of generations to run for. We are currently running for 6 generations.
+- We could also change the number of fixed keys to use. We are currently using 5 fixed keys for each generation.
+- We could also change the number of keys to use. We are currently using 30 keys.
+- We could also change the number of fingers to use. We are currently using 4 fingers.
+- We could also change the number of generations to run for. We are currently running for 6 generations.
+- We could also change the number of people to use. We are currently using 10000 people for the first generation and 1000 people for the next 28 generations and 120 people for the last generation.
+- We could also change the number of generations to run for. We are currently running for 6 generations.
+- We could also change the number of people to use. We are currently using 10000 people for the first generation and 1000 people for the next 28 generations and 120 people for the last generation.
 
 '''
 #---------------------------------
@@ -51,6 +62,13 @@ def objective_function(x): #take in an individual, x, which is a 30x2 matrix (30
     f2 = np.array([5.5,2.5]) #middle finger
     f3 = np.array([7.5,2.5]) #index finger
     home_positions = np.array([f0,f1,f2,f3])
+
+    #initialize counters
+    pinky_finger_count = 0
+    ring_finger_count = 0
+    middle_finger_count = 0
+    index_finger_count = 0
+    same_finger_penalty_count = 0
     
     #take in some string of letters (paragraph from chatgpt)
     string = "The sun's warm glow fell across the field. A breeze stirred, rustling leaves as birds chirped. \
@@ -71,21 +89,26 @@ def objective_function(x): #take in an individual, x, which is a 30x2 matrix (30
 
         if x[next_key][0] <= 2:   # pinky finger
             next_active_finger = 0
-            active_finger_penalty = 2
+            active_finger_penalty = 100
+            pinky_finger_count += 1
         elif x[next_key][0] <= 4: # ring finger
             next_active_finger = 1
-            active_finger_penalty = 0.5
+            active_finger_penalty = 5
+            ring_finger_count += 1
         elif x[next_key][0] <= 6: # middle finger
             next_active_finger = 2
             active_finger_penalty = 0
+            middle_finger_count += 1
         else:                       # index finger
             next_active_finger = 3
             active_finger_penalty = 0
+            index_finger_count += 1
             
         # Calc current_finger_position
         if j != 0 and next_active_finger == prev_active_finger:     # Same finger
             current_finger_position = prev_finger_position
-            same_finger_penalty = 3
+            same_finger_penalty = 2000
+            same_finger_penalty_count += 1
         else:                                                       # Different finger
             current_finger_position = home_positions[next_active_finger]
             same_finger_penalty = 0
@@ -99,7 +122,10 @@ def objective_function(x): #take in an individual, x, which is a 30x2 matrix (30
 
         # Calc score
         score += distance + active_finger_penalty + same_finger_penalty
-    return score
+
+    # Combine counters
+    counters = [pinky_finger_count, ring_finger_count, middle_finger_count, index_finger_count, same_finger_penalty_count]
+    return score, counters
 
 def generate_individual(fixed_keys):
     #this code generates a random 30x2 matrix (30 rows for different keys, 2 columns for x and y positions)
@@ -142,41 +168,68 @@ def generate_population(num_people, fixed_keys):
 def genetic_algorithm(f, num_people):
     best_individuals = []
     best_scores = []
+    best_counters = []
 
     # Start with no fixed keys for the first generation
     fixed_keys = {}
-    # Group indices into sets of 5
+    # Group indices into sets of 1
     fixed_key_indices = [
-        [0, 4, 8, 14, 19],      # a, e, i, o, t
-        [27, 26, 13, 18, 29],   # ,, ., n, s, '
-        [7, 11, 3, 2, 17],      # h, l, d, c, r
-        [12, 5, 15, 6, 20],     # m, f, p, g, u
-        [24, 1, 21, 10, 22],    # y, b, v, k, w
-        [9, 16, 25, 28, 23]     # j, q, z, ?, x
+        [0],  # a
+        [4],  # e
+        [8],  # i
+        [14], # o
+        [19], # t
+        [27], # ,
+        [26], # .
+        [13], # n
+        [18], # s
+        [29], # '
+        [7],  # h
+        [11], # l
+        [3],  # d
+        [2],  # c
+        [17], # r
+        [12], # m
+        [5],  # f
+        [15], # p
+        [6],  # g
+        [20], # u
+        [24], # y
+        [1],  # b
+        [21], # v
+        [10], # k
+        [22], # w
+        [9],  # j
+        [16], # q
+        [25], # z
+        [28], # ?
+        [23]  # x
     ]
 
-    for i in range(6):
+    for i in range(30):
         # Generate population with current fixed keys
         population = generate_population(num_people[i], fixed_keys)
 
         # Evaluate fitness
-        fitness_scores = [f(p) for p in population]
+        fitness_scores = [f(p) for p in population][0]
 
         # Select the best individual
-        best_index = np.argmin(fitness_scores)
+        best_index = np.argmin(fitness_scores[0])
         best_individual = population[best_index]
         best_score = fitness_scores[best_index]
+        best_counter = fitness_scores[1]
 
         # Save results
         best_individuals.append(best_individual)
         best_scores.append(best_score)
+        best_counters.append(best_counter)
 
         # Update fixed keys using the next set of 5 keys
         current_fixed_indices = fixed_key_indices[i]  # Get the next set of indices
         for idx in current_fixed_indices:
             fixed_keys[idx] = best_individual[idx]  # Fix the key to its position
 
-    return best_individuals, best_scores
+    return best_individuals, best_scores, best_counters
 
 
 def print_keyboard_layout(x):
@@ -198,8 +251,8 @@ def print_keyboard_layout(x):
 #---------------------------------
 # Optimize
 #---------------------------------
-number_of_people = np.array([1000, 1000, 1000, 1000, 1000, 120])
-best_individuals, best_scores = genetic_algorithm(objective_function, number_of_people)
+number_of_people = np.array([10000] + [1000] * 28 + [120])
+best_individuals, best_scores, best_counters = genetic_algorithm(objective_function, number_of_people)
 
 
 #---------------------------------
@@ -208,6 +261,9 @@ best_individuals, best_scores = genetic_algorithm(objective_function, number_of_
 # Print all 6 scores
 for i, score in enumerate(best_scores):
     print(f"Best Score {i + 1}: {score}")
+
+for i, counter in enumerate(best_counters):
+    print(f"Counter {i + 1}: {counter}")
 
 # Print all 6 keyboard layouts
 for i, individual in enumerate(best_individuals):
