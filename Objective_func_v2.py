@@ -1,6 +1,29 @@
+'''
+The purpose of this code is...
+
+
+Authors:
+ - Austin Erickson "The Brain"
+ - Isaac Detiege "The Muscle"
+ - Ammon Miller "The Milkman" (Copilot generated, lol)
+
+Last updated: 3/27/2025 around 3pm
+
+Notes:
+- Updated layout. Feel free to add / remove comments. I have no attachment to them. 
+- 
+
+'''
+#---------------------------------
+# Import 
+#---------------------------------
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+#---------------------------------
+# Functions
+#---------------------------------
 def string_to_index(string):
     # Convert string to lower case
     string = string.lower()
@@ -21,51 +44,62 @@ def string_to_index(string):
             index.append(29)
     return index
     
-def objective_function(x): #take in x, a 30x2 matrix (30 rows for different keys, 2 columns for x and y positions)
+def objective_function(x): #take in an individual, x, which is a 30x2 matrix (30 rows for different keys, 2 columns for x and y positions)
     #initialize resting finger positions - assume that each finger comes to rest after pressing a key UNLESS the next key is pressed by the same finger
     f0 = np.array([1.5,2]) #pinky finger
     f1 = np.array([3.5,2.5]) #ring finger
     f2 = np.array([5.5,2.5]) #middle finger
     f3 = np.array([7.5,2.5]) #index finger
-    fingers = np.array([f0,f1,f2,f3])
+    home_positions = np.array([f0,f1,f2,f3])
     
     #take in some string of letters (paragraph from chatgpt)
     string = "The sun's warm glow fell across the field. A breeze stirred, rustling leaves as birds chirped. \
-        The dog's bark echoed while a cat lounged nearby. People walked along quiet paths, sharing thoughts. \
-        What joy exists in moments like these? Clouds drifted above, shadows shifting below. Foxes dashed through the brush. \
-        Time's passage often feels swift. Yet, laughter lingers. Jars of jam lined the shelf. Vivid quilts hung, displaying vibrant hues. \
-        Zebras grazed in far-off lands. Quirky scenes unfold daily. Few question why. \
-        Life's charm, both simple and profound, remains constant. Is there anything more precious than this?"
-    string_index = string_to_index(string) #convert string to index in function above
-    # print(string_index)
-    total_dist = 0 # initialize total_dist to 0
-    active_finger_prev = 4 # initialize active_finger_prev to a value that is not 0,1,2,3
+    The dog's bark echoed while a cat lounged nearby. People walked along quiet paths, sharing thoughts. \
+    What joy exists in moments like these? Clouds drifted above, shadows shifting below. Foxes dashed through the brush. \
+    Time's passage often feels swift. Yet, laughter lingers. Jars of jam lined the shelf. Vivid quilts hung, displaying vibrant hues. \
+    Zebras grazed in far-off lands. Quirky scenes unfold daily. Few question why. \
+    Life's charm, both simple and profound, remains constant. Is there anything more precious than this?"
+
+    string_index = string_to_index(string) #convert string to index in function above    
+    score = 0 # initialize total_dist to 0
+    prev_active_finger = np.inf # initialize active_finger_prev to a value that is not 0,1,2,3
     for j in range(len(string_index)):
-        active_key = string_index[j]
-        #find which finger is closest to the key
-        if x[active_key][0] <= 2:
-            active_finger = 0
-        elif x[active_key][0] <= 4:
-            active_finger = 1
-        elif x[active_key][0] <= 6:
-            active_finger = 2
-        else:
-            active_finger = 3
+
+        # Where is the key?
+        next_key = string_index[j]
+        next_finger_position = x[next_key]
+
+        if x[next_key][0] <= 2:   # pinky finger
+            next_active_finger = 0
+            active_finger_penalty = 2
+        elif x[next_key][0] <= 4: # ring finger
+            next_active_finger = 1
+            active_finger_penalty = 0.5
+        elif x[next_key][0] <= 6: # middle finger
+            next_active_finger = 2
+            active_finger_penalty = 0
+        else:                       # index finger
+            next_active_finger = 3
+            active_finger_penalty = 0
             
-        #calculate the position of the active finger
-        if j != 0 and active_finger == active_finger_prev:  
-            finger_pos = finger_pos_prev
-        else:
-            finger_pos = fingers[active_finger]
+        # Calc current_finger_position
+        if j != 0 and next_active_finger == prev_active_finger:     # Same finger
+            current_finger_position = prev_finger_position
+            same_finger_penalty = 3
+        else:                                                       # Different finger
+            current_finger_position = home_positions[next_active_finger]
+            same_finger_penalty = 0
         
-        #reset active_finger_prev and finger_pos_prev
-        active_finger_prev = active_finger
-        finger_pos_prev = x[active_key]
+        # Reset prev_finger_position and prev_active_finger
+        prev_finger_position = next_finger_position
+        prev_active_finger = next_active_finger
         
-        #calculate the distance between the active finger and the key
-        key_dist = np.linalg.norm(finger_pos - x[active_key])
-        total_dist += key_dist
-    return total_dist
+        # Calc distance
+        distance = np.linalg.norm(current_finger_position - x[next_key])
+
+        # Calc score
+        score += distance + active_finger_penalty + same_finger_penalty
+    return score
 
 def generate_individual(fixed_keys):
     #this code generates a random 30x2 matrix (30 rows for different keys, 2 columns for x and y positions)
@@ -97,7 +131,6 @@ def generate_individual(fixed_keys):
                 break
     return person
 
-
 def generate_population(num_people, fixed_keys):
     # Create a population of num_people persons
     population = []
@@ -106,15 +139,12 @@ def generate_population(num_people, fixed_keys):
         population.append(person)
     return population
 
-
-
 def genetic_algorithm(f, num_people):
     best_individuals = []
     best_scores = []
 
     # Start with no fixed keys for the first generation
     fixed_keys = {}
-    
     # Group indices into sets of 5
     fixed_key_indices = [
         [0, 4, 8, 14, 19],      # a, e, i, o, t
@@ -165,9 +195,16 @@ def print_keyboard_layout(x):
         print(row)
 
 
-
+#---------------------------------
+# Optimize
+#---------------------------------
 number_of_people = np.array([1000, 1000, 1000, 1000, 1000, 120])
 best_individuals, best_scores = genetic_algorithm(objective_function, number_of_people)
+
+
+#---------------------------------
+# Print & Plot Results
+#---------------------------------
 # Print all 6 scores
 for i, score in enumerate(best_scores):
     print(f"Best Score {i + 1}: {score}")
