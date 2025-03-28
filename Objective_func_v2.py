@@ -10,19 +10,7 @@ Authors:
 Last updated: 3/27/2025 around 3pm
 
 Notes:
-- Updated layout. Feel free to add / remove comments. I have no attachment to them. 
-- If same_finger_penalty is really big, then e gets moved to the pinky finger. We theorize 
-  that this is because lots of letters come before and after e.
-- We are currently using the same number of people for each generation. We could change this
-  to use a different number of people for each generation.
-- We could also change the number of generations to run for. We are currently running for 6 generations.
-- We could also change the number of fixed keys to use. We are currently using 5 fixed keys for each generation.
-- We could also change the number of keys to use. We are currently using 30 keys.
-- We could also change the number of fingers to use. We are currently using 4 fingers.
-- We could also change the number of generations to run for. We are currently running for 6 generations.
-- We could also change the number of people to use. We are currently using 10000 people for the first generation and 1000 people for the next 28 generations and 120 people for the last generation.
-- We could also change the number of generations to run for. We are currently running for 6 generations.
-- We could also change the number of people to use. We are currently using 10000 people for the first generation and 1000 people for the next 28 generations and 120 people for the last generation.
+- Roll the dice method (40% p1, 40% p2, 20% mutation)
 
 '''
 #---------------------------------
@@ -72,11 +60,12 @@ def objective_function(x): #take in an individual, x, which is a 30x2 matrix (30
     
     #take in some string of letters (paragraph from chatgpt)
     string = "The sun's warm glow fell across the field. A breeze stirred, rustling leaves as birds chirped. \
-    The dog's bark echoed while a cat lounged nearby. People walked along quiet paths, sharing thoughts. \
-    What joy exists in moments like these? Clouds drifted above, shadows shifting below. Foxes dashed through the brush. \
-    Time's passage often feels swift. Yet, laughter lingers. Jars of jam lined the shelf. Vivid quilts hung, displaying vibrant hues. \
-    Zebras grazed in far-off lands. Quirky scenes unfold daily. Few question why. \
-    Life's charm, both simple and profound, remains constant. Is there anything more precious than this?"
+        The dog's bark echoed while a cat lounged nearby. People walked along quiet paths, sharing thoughts. \
+        What joy exists in moments like these? Clouds drifted above, shadows shifting below. Foxes dashed through the brush. \
+        Time's passage often feels swift. Yet, laughter lingers. Jars of jam lined the shelf. Vivid quilts hung, displaying vibrant hues. \
+        Zebras grazed in far-off lands. Quirky scenes unfold daily. Few question why. \
+        Life's charm, both simple and profound, remains constant. Is there anything more precious than this?"
+    
 
     string_index = string_to_index(string) #convert string to index in function above    
     score = 0 # initialize total_dist to 0
@@ -89,11 +78,11 @@ def objective_function(x): #take in an individual, x, which is a 30x2 matrix (30
 
         if x[next_key][0] <= 2:   # pinky finger
             next_active_finger = 0
-            active_finger_penalty = 100
+            active_finger_penalty = 0
             pinky_finger_count += 1
         elif x[next_key][0] <= 4: # ring finger
             next_active_finger = 1
-            active_finger_penalty = 5
+            active_finger_penalty = 0
             ring_finger_count += 1
         elif x[next_key][0] <= 6: # middle finger
             next_active_finger = 2
@@ -107,7 +96,7 @@ def objective_function(x): #take in an individual, x, which is a 30x2 matrix (30
         # Calc current_finger_position
         if j != 0 and next_active_finger == prev_active_finger:     # Same finger
             current_finger_position = prev_finger_position
-            same_finger_penalty = 2000
+            same_finger_penalty = 0
             same_finger_penalty_count += 1
         else:                                                       # Different finger
             current_finger_position = home_positions[next_active_finger]
@@ -127,23 +116,12 @@ def objective_function(x): #take in an individual, x, which is a 30x2 matrix (30
     counters = [pinky_finger_count, ring_finger_count, middle_finger_count, index_finger_count, same_finger_penalty_count]
     return score, counters
 
-def generate_individual(fixed_keys):
-    #this code generates a random 30x2 matrix (30 rows for different keys, 2 columns for x and y positions)
-    #x can be an int with values of 1, 2, 3, 4, 5, 6, 7, 8
-    # y is an int with values of 1, 2, 3 if x is 1 or 2 and 1, 2, 3, 4 if x is 3, 4, 5, 6, 7, 8
-    # x and y pairings cannot be repeated
-    
-    # Initialize person with fixed keys
+def generate_individual():  
+    # Initialize person 
     person = np.zeros((30,2))
     used_pairs = set()
 
-    for key, value in fixed_keys.items():
-        person[key] = value
-        used_pairs.add(tuple(value))
-
     for i in range(30):
-        if i in fixed_keys:  # Skip fixed keys
-            continue
         while True:
             x_val = np.random.randint(1, 9)         # Random x value between 1 and 8
             if x_val == 1 or x_val == 2:            # Pinky range
@@ -157,77 +135,106 @@ def generate_individual(fixed_keys):
                 break
     return person
 
-def generate_population(num_people, fixed_keys):
+def generate_population(num_people):
     # Create a population of num_people persons
     population = []
     for i in range(num_people):
-        person = generate_individual(fixed_keys)
+        person = generate_individual()
         population.append(person)
     return population
 
-def genetic_algorithm(f, num_people):
+def genetic_algorithm(f, num, perc, tol):
+    # Initialize parameters
+    number_people = num[0]      # Number of people in the population
+    number_offspring = num[1]   # Number of offspring per pair of parents
+    perc_clone = perc[0]        # Percentage of the population to clone (top 10%)
+    perc_parents = perc[1]      # Percentage of the population to use as parents (top 50%)
+    perc_offspring = perc[2]    # Percentage of the population to be offspring (90% of the population)
+
+    # Generate intial population
+    population = generate_population(number_people)
+
+    # Initialize convergence criteria
+    best_score_unchanged_count = 0
+    best_score = float('inf')  # Initialize best score to infinity
+
+    # Initialize lists to store best individuals and their scores
     best_individuals = []
     best_scores = []
     best_counters = []
 
-    # Start with no fixed keys for the first generation
-    fixed_keys = {}
-    # Group indices into sets of 1
-    fixed_key_indices = [
-        [0],  # a
-        [4],  # e
-        [8],  # i
-        [14], # o
-        [19], # t
-        [27], # ,
-        [26], # .
-        [13], # n
-        [18], # s
-        [29], # '
-        [7],  # h
-        [11], # l
-        [3],  # d
-        [2],  # c
-        [17], # r
-        [12], # m
-        [5],  # f
-        [15], # p
-        [6],  # g
-        [20], # u
-        [24], # y
-        [1],  # b
-        [21], # v
-        [10], # k
-        [22], # w
-        [9],  # j
-        [16], # q
-        [25], # z
-        [28], # ?
-        [23]  # x
-    ]
+    while True:
+        # Evaluate fitness and sort the population based on scores
+        fitness_results = [f(p) for p in population]
+        sorted_data = sorted(zip(population, fitness_results), key=lambda x: x[1][0])
 
-    for i in range(30):
-        # Generate population with current fixed keys
-        population = generate_population(num_people[i], fixed_keys)
+        # Extract sorted population and fitness results
+        sorted_population = [x[0] for x in sorted_data]
+        best_score, best_counter = sorted_data[0][1]
 
-        # Evaluate fitness
-        fitness_scores = [f(p) for p in population][0]
-
-        # Select the best individual
-        best_index = np.argmin(fitness_scores[0])
-        best_individual = population[best_index]
-        best_score = fitness_scores[best_index]
-        best_counter = fitness_scores[1]
-
-        # Save results
-        best_individuals.append(best_individual)
+        # Store the best individual data
+        best_individuals.append(sorted_population[0])
         best_scores.append(best_score)
         best_counters.append(best_counter)
 
-        # Update fixed keys using the next set of 5 keys
-        current_fixed_indices = fixed_key_indices[i]  # Get the next set of indices
-        for idx in current_fixed_indices:
-            fixed_keys[idx] = best_individual[idx]  # Fix the key to its position
+        # Update convergence criteria
+        current_best_score = best_score
+        
+        if current_best_score < best_score:
+            best_score = current_best_score
+            best_score_unchanged_count = 0  # Reset the counter if the best score improves
+        else:
+            best_score_unchanged_count += 1  # Increment the counter if the best score remains unchanged
+
+        if best_score_unchanged_count >= tol:
+            break
+
+        ## Selection ##
+        # Clone the top 10% of the population to be parents for the next generation
+        clone = sorted_population[:int(number_people * perc_clone)]  # Top perc_clone% of the sorted population
+
+        # Pick the top 50% to be parents
+        parents = sorted_population[:int(number_people * perc_parents)]  # Top 50% of the sorted population
+
+        ## Crossover ##
+        # Produce perc_offspring% offspring
+        offspring = []
+        while len(offspring) < number_people * perc_offspring:
+            # Randomly select two parents
+            indices = np.random.choice(len(parents), size=2, replace=False)  # Sample indices
+            parent1, parent2 = parents[indices[0]], parents[indices[1]]  # Select parents using indices
+
+            for _ in range(number_offspring):  # Each pair produces number_offspring offspring
+                child = np.zeros_like(parent1)
+                used_keys = set()
+
+                for i in range(30):  # Iterate over all keys
+                    if tuple(parent1[i]) in used_keys and tuple(parent2[i]) in used_keys:
+                        continue  # Skip if both parents' keys are already used
+
+                    rand = np.random.rand()
+                    if rand < 0.4:  # 40% chance to inherit from parent1
+                        if tuple(parent1[i]) not in used_keys:
+                            child[i] = parent1[i]
+                            used_keys.add(tuple(parent1[i]))
+                    elif rand < 0.8:  # 40% chance to inherit from parent2
+                        if tuple(parent2[i]) not in used_keys:
+                            child[i] = parent2[i]
+                            used_keys.add(tuple(parent2[i]))
+                    else:  # 20% chance to mutate
+                        while True:
+                            x_val = np.random.randint(1, 9)
+                            y_val = np.random.randint(1, 4) if x_val <= 2 else np.random.randint(1, 5)
+                            if (x_val, y_val) not in used_keys:
+                                child[i] = [x_val, y_val]
+                                used_keys.add((x_val, y_val))
+                                break
+
+                offspring.append(child)
+                if len(offspring) >= number_offspring:
+                    break
+        
+        population = clone + offspring  # Combine parents and offspring
 
     return best_individuals, best_scores, best_counters
 
@@ -251,21 +258,32 @@ def print_keyboard_layout(x):
 #---------------------------------
 # Optimize
 #---------------------------------
-number_of_people = np.array([10000] + [1000] * 28 + [120])
-best_individuals, best_scores, best_counters = genetic_algorithm(objective_function, number_of_people)
+# Parameters
+number_of_people = 1000 # Number of people in the population
+number_of_offspring = 4 # Number of offspring per pair of parents
+num = np.array([number_of_people, number_of_offspring])
+
+percentage_clone = 0.1  # Percentage of the population to clone (top 10%)
+percentage_parents = 0.5  # Percentage of the population to use as parents (top 50%)
+percentage_offspring = 0.9  # Percentage of the population to be offspring (90% of the population)
+perc = np.array([percentage_clone, percentage_parents, percentage_offspring])
+
+tol = 10
+
+best_individuals, best_scores, best_counters = genetic_algorithm(objective_function, num, perc, tol)
 
 
 #---------------------------------
 # Print & Plot Results
 #---------------------------------
-# Print all 6 scores
+# Print all scores
 for i, score in enumerate(best_scores):
     print(f"Best Score {i + 1}: {score}")
-
 for i, counter in enumerate(best_counters):
     print(f"Counter {i + 1}: {counter}")
-
-# Print all 6 keyboard layouts
+for i, individual in enumerate(best_individuals):
+    print(f"Individual {i + 1}: {individual}")
+# Print all keyboard layouts
 for i, individual in enumerate(best_individuals):
     print(f"Keyboard Layout {i + 1}:")
     print_keyboard_layout(individual)
@@ -283,3 +301,6 @@ plt.grid(True)
 plt.xticks(generations)  # Ensure all generations are labeled on the x-axis
 plt.savefig('genetic_conv.png')  # Save the figure as genetic_conv.png
 plt.show()
+
+
+
