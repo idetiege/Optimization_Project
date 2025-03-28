@@ -108,48 +108,6 @@ def generate_population(num_people, fixed_keys):
 
 
 
-
-# def genetic_algorithm(f, num_people):
-#     # Generate population
-#     pop_1 = generate_population(num_people[0], {})  # Generate the first population without any fixed keys
-
-#     # Evaluate fitness of each individual
-#     fitness_scores_1 = [f(p) for p in pop_1]
-
-#     # Sort individuals by fitness
-#     sort_pop_1 = [x for _, x in sorted(zip(fitness_scores_1, pop_1))]
-
-#     # Select the best individual (lowest distance)
-#     best_indiv_1 = sort_pop_1[0]
-
-#     # Find the index of best_individual in the population
-#     best_index_1 = next(i for i, individual in enumerate(pop_1) if np.array_equal(individual, best_indiv_1))
-#     best_score_1 = fitness_scores_1[best_index_1]
-
-
-#     # Generate a new population with the fixed keys
-#     fixed_keys = {k: best_indiv_1[k] for k in [0, 4, 8, 14, 19]}
-#     pop_2 = generate_population(num_people[1], fixed_keys)  # Generate the second population with fixed keys
-
-#     # Evaluate fitness of the new population
-#     fitness_scores_2 = [f(p) for p in pop_2]
-
-#     # Sort individuals by fitness
-#     sort_pop_2 = [x for _, x in sorted(zip(fitness_scores_2, pop_2))]
-
-#     # Select the best individual (lowest distance) from the new population
-#     best_indiv_2 = sort_pop_2[0]
-
-#     # Find the index of best_individual_2 in the new population
-#     best_index_2 = next(i for i, individual in enumerate(pop_2) if np.array_equal(individual, best_indiv_2))
-#     best_score_2 = fitness_scores_2[best_index_2]
-
-
-
-#     return best_indiv_1, best_score_1, best_indiv_2, best_score_2  # Return the best individuals and their scores
-
-
-
 def genetic_algorithm(f, num_people):
     best_individuals = []
     best_scores = []
@@ -191,13 +149,6 @@ def genetic_algorithm(f, num_people):
     return best_individuals, best_scores
 
 
-
-
-
-
-
-
-
 def print_keyboard_layout(x):
     layout = [[" " for _ in range(8)] for _ in range(4)]
     letters = "abcdefghijklmnopqrstuvwxyz.,?'"
@@ -215,42 +166,7 @@ def print_keyboard_layout(x):
 
 
 
-
-
-# print(population)
-
-# # Extract x and y coordinates
-# x_coords = person[:, 0]
-# y_coords = person[:, 1]
-
-# # Create scatter plot
-# plt.scatter(x_coords, y_coords)
-
-# # Add labels and title
-# plt.xlabel('X Coordinate')
-# plt.ylabel('Y Coordinate')
-# plt.title('Scatter Plot of Generated Individual')
-
-# # Show plot
-# plt.show()
-
-
-
-# number_of_people = np.array([1000, 1000, 1000, 1000, 100, 100])
-# best_individual_1, best_score_1, best_individual_2, best_score_2 = genetic_algorithm(objective_function, number_of_people)
-# # print("Best Individual 1:", best_individual_1)
-# print("Best Score 1:", best_score_1)  # This is the score of the first best individual
-# # print("Best Individual 2:", best_individual_2)
-# print("Best Score 2:", best_score_2)  # This is the score of the second best individual
-
-
-# print_keyboard_layout(best_individual_1)  # Print the keyboard layout of the first best individual
-# print_keyboard_layout(best_individual_2)
-
-
-
-
-number_of_people = np.array([1000000, 100000, 100000, 100000, 100000, 120])
+number_of_people = np.array([1000, 1000, 1000, 1000, 1000, 120])
 best_individuals, best_scores = genetic_algorithm(objective_function, number_of_people)
 # Print all 6 scores
 for i, score in enumerate(best_scores):
